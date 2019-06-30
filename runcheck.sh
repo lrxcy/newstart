@@ -21,7 +21,7 @@ sed -i 's/\*//g'  ./tmp/${1}.info && sed -i 's/^[[:space:]]*//'  ./tmp/${1}.info
 # 变量相应的信息
 start=$(sed -n '1p' ./tmp/${1}.info | awk -F ': ' '{print $2}')
 expire=$(sed -n '2p' ./tmp/${1}.info | awk -F ': ' '{print $2}')
-issuer=$(sed -n '3p' ./tmp/${1}.info | awk -F ': ' '{print $2}')
+issuer=$(sed -n '3p' ./tmp/${1}.info | awk -F ': ' '{print $2}'| awk -F 'CN=' '{print $2}' | awk -F ',' '{print $1}')
 subject=$(sed -n '4p' ./tmp/${1}.info | awk -F ': ' '{print $2}' | awk -F 'CN=' '{print $2}' | awk -F ',' '{print $1}')
 # status=$(sed -n '5p' ./tmp/${1}.info | awk -F 'y ' '{print $2}' | awk -F '.' '{print $1}')
 
@@ -49,18 +49,18 @@ echo '"expire date": "'$expire'",' >> ./tmp/${1}.json
 if [ $expirestamp -lt $nowstamp ]
 then
     echo '"status": "Expired",' >> ./tmp/${1}.json
-    echo '"statuscolor": "error",' >> ./tmp/${1}.json
+    echo '"status_display": "error",' >> ./tmp/${1}.json
 elif [ $expireday -lt 30 ]
 then
     echo '"status": "Soon Expired",' >> ./tmp/${1}.json
-    echo '"statuscolor": "warning",' >> ./tmp/${1}.json
+    echo '"status_display": "warning",' >> ./tmp/${1}.json
 else
     echo '"status": "Valid",' >> ./tmp/${1}.json
-    echo '"statuscolor": "success",' >> ./tmp/${1}.json
+    echo '"status_display": "success",' >> ./tmp/${1}.json
 fi
 
 echo '"remain": "'$expireday'",' >> ./tmp/${1}.json
 echo '"common name": "'$subject'",' >> ./tmp/${1}.json
-echo '"issuer": "'$issuer'"' >> ./tmp/${1}.json
+echo '"issuer_cn": "'$issuer'"' >> ./tmp/${1}.json
 
 echo '},' >> ./tmp/${1}.json
