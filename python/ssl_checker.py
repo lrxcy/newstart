@@ -130,27 +130,69 @@ def get_cert_info(host, cert):
 
     cert_subject = cert.get_subject()
 
-    context['issued_to'] = cert_subject.CN
-    context['issued_o'] = cert_subject.O
-    context['issuer_c'] = cert.get_issuer().countryName
-    context['issuer_o'] = cert.get_issuer().organizationName
-    context['issuer_ou'] = cert.get_issuer().organizationalUnitName
-    context['issuer_cn'] = cert.get_issuer().commonName
-    context['cert_sn'] = cert.get_serial_number()
-    context['cert_sha1'] = cert.digest('sha1').decode()
-    context['cert_alg'] = cert.get_signature_algorithm().decode()
+    context['Detected_domain'] = host
+
+    if cert_subject.CN == None:
+        context['issued_to'] = ''
+        # context['issued_to'] = cert_subject.CN
+    else:
+        context['issued_to'] = cert_subject.CN.encode('ascii')
+
+    if cert_subject.O == None:
+        context['issued_o'] = ''
+        # context['issued_o'] = cert_subject.O
+    else:
+        context['issued_o'] = cert_subject.O.encode('ascii')
+
+    if cert.get_issuer().countryName == None:
+        context['issuer_c'] = ''
+        # context['issuer_c'] = cert.get_issuer().countryName
+    else:
+        context['issuer_c'] = cert.get_issuer().countryName.encode('ascii')
+
+    if cert.get_issuer().organizationName == None:
+        context['issuer_o'] = ''
+        # context['issuer_o'] = cert.get_issuer().organizationName
+    else:
+        context['issuer_o'] = cert.get_issuer().organizationName.encode('ascii')
+
+    if cert.get_issuer().organizationalUnitName == None:
+        context['issuer_ou'] = ''
+        # context['issuer_ou'] = cert.get_issuer().organizationalUnitName
+    else:
+        context['issuer_ou'] = cert.get_issuer().organizationalUnitName.encode('ascii')
+
+    if cert.get_issuer().commonName == None:
+        context['issuer_cn'] = ''
+        # context['issuer_cn'] = cert.get_issuer().commonName
+    else:
+        context['issuer_cn'] = cert.get_issuer().commonName.encode('ascii')
+
+    context['cert_sn'] = str(cert.get_serial_number()) + 'L'
+    # context['cert_sn'] = cert.get_serial_number()
+
+    if cert.digest('sha1').decode() == None:
+        context['cert_sha1'] = ''
+        # context['cert_sha1'] = cert.digest('sha1').decode()
+    else:
+        context['cert_sha1'] = cert.digest('sha1').decode().encode('ascii')
+
+    if cert.get_signature_algorithm().decode() == None:
+        context['cert_alg'] = ''
+        # context['cert_alg'] = cert.get_signature_algorithm().decode()
+    else:
+        context['cert_alg'] = cert.get_signature_algorithm().decode().encode('ascii')
+
     context['cert_ver'] = cert.get_version()
     context['cert_sans'] = get_cert_sans(cert)
-    context['cert_exp'] = cert.has_expired()
+    context['cert_exp'] = str(cert.has_expired())
 
     # Valid from
-    valid_from = datetime.strptime(cert.get_notBefore().decode('ascii'),
-                                   '%Y%m%d%H%M%SZ')
+    valid_from = datetime.strptime(cert.get_notBefore().decode('ascii'), '%Y%m%d%H%M%SZ')
     context['valid_from'] = valid_from.strftime('%Y-%m-%d')
 
     # Valid till
-    valid_till = datetime.strptime(cert.get_notAfter().decode('ascii'),
-                                   '%Y%m%d%H%M%SZ')
+    valid_till = datetime.strptime(cert.get_notAfter().decode('ascii'), '%Y%m%d%H%M%SZ')
     context['valid_till'] = valid_till.strftime('%Y-%m-%d')
 
     # Validity days
@@ -163,6 +205,7 @@ def print_status(host, context, analyze=False):
     """Print all the usefull info about host."""
     days_left = (datetime.strptime(context[host]['valid_till'], '%Y-%m-%d') - datetime.now()).days
 
+    # print('\t\tDetected_domain: {}'.format(host))
     print('\t{}[+]{} {}\n\t{}'.format(Clr.GREEN, Clr.RST, host, '-' * (len(host) + 5)))
     print('\t\tIssued domain: {}'.format(context[host]['issued_to']))
     print('\t\tIssued to: {}'.format(context[host]['issued_o']))
@@ -190,7 +233,7 @@ def print_status(host, context, analyze=False):
     for san in context[host]['cert_sans'].split(';'):
         print('\t\t \\_ {}'.format(san.strip()))
 
-    if days_left <= 31:
+    if days_left <= 30:
         send_message(str("domain({}) expires in {} days".format(host, days_left)))
 
     print('\n')
@@ -227,10 +270,12 @@ def show_result(user_args):
             if not user_args.json_true:
                 print_status(host, context, user_args.analyze)
         except Exception as error:
+        # except BaseException as error:
             if not user_args.json_true:
                 print('\t{}[-]{} {:<20s} Failed: {}\n'.format(Clr.RED, Clr.RST, host, error))
+                send_message(
+                    str('\tPlease check the Domain Name({}) Certificate, Error detection: {}\n'.format(host, error)))
                 failed_cnt += 1
-                send_message(str('\tPlease check the Domain Name({}) Certificate, Error detection: {}\n'.format(host, error)))
         except KeyboardInterrupt:
             print('{}Canceling script...{}\n'.format(Clr.YELLOW, Clr.RST))
             sys.exit(1)
@@ -249,7 +294,11 @@ def show_result(user_args):
             from pprint import pprint
             pprint(context)
         else:
-            print(context)
+            contextList = []
+            for host in hosts:
+                contextList.append(context[host])
+            contextNew = json.dumps(contextList)
+            print(contextNew)
 
 
 def export_csv(context, filename):
